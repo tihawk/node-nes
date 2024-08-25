@@ -14,46 +14,22 @@ export default class CodeGenerator {
         return ast.body.map((statement: any) => this.generateAssembly(statement)).join('\n');
 
       case 'VariableDeclaration':
-        return ast.declarations.map((declaration: any) => this.generateAssembly(declaration)).join('\n');
+        return this.generateVariableDeclaration(ast);
 
       case 'VariableDeclarator':
-        const varName = ast.id.name;
-        const varLocation = this.memoryManager.getMemoryLocation(varName);
-        const initValue = this.generateAssembly(ast.init);
-        return `${initValue}\nSTA ${varLocation}`;
+        return this.generateVariableDeclarator(ast);
 
       case 'Literal': // a number or string (or w/e other literals there are)
-        const hexValue = ast.value.toString(16);
-        if (ast.value == parseInt(hexValue, 16)) {
-          if (ast.value > 255) throw new Error(`Integers bigger than 255 not supported: ${ast.value}`);
-          // value is an integer
-          return `LDA #$${hexValue}`;
-        } else {
-          // TODO implement storing strings as an array of bytes
-          throw new Error(`Only integers are allowed to be initialised as literals. Passed value: ${ast.value}`)
-        }
+        return this.generateLiteral(ast);
 
       case 'NewExpression': // TODO
         throw new Error(`Variable declarators of type NewExpression are not implemented: ${util.inspect(ast, { showHidden: false, depth: null, colors: true })}`)
 
       case 'BinaryExpression':
         return this.generateBinaryExpression(ast);
-        const left = this.generateAssembly(ast.left);
-        const right = this.generateAssembly(ast.right);
-        const operator = ast.operator;
-        switch (operator) {
-          case '+':
-            // works only with 8-bit addition right now
-            return `${left}\nSTA TEMP\n${right}\nCLC\nADC TEMP`;
-          case '-':
-            return `${right}\nSTA TEMP\n${left}\nSEC\nSBC TEMP`;
-          default:
-            throw new Error(`Unsupported binary expression operator: ${operator}`);
-        }
 
       case 'Identifier': // allocates memory for the variable
-        const identifierLocation = this.memoryManager.getMemoryLocation(ast.name);
-        return `LDA ${identifierLocation}`;
+        return this.generateIdentifier(ast);
 
       case 'ExpressionStatement': // TODO
         throw new Error(`Variable declarators of type ExpressionStatement are not implemented: ${util.inspect(ast, { showHidden: false, depth: null, colors: true })}`)
@@ -75,42 +51,72 @@ export default class CodeGenerator {
     }
   }
 
+  /* GENERIC JAVASCRIPT TOKENS */
+
+  generateVariableDeclaration(ast: any) {
+    return ast.declarations.map((declaration: any) => this.generateAssembly(declaration)).join('\n');
+  }
+
+  generateVariableDeclarator(ast: any) {
+    const varName = ast.id.name;
+    const varLocation = this.memoryManager.getMemoryLocation(varName);
+    const initValue = this.generateAssembly(ast.init);
+    return `${initValue}\nSTA ${varLocation}`;
+  }
+
+  generateLiteral(ast: any) {
+    const hexValue = ast.value.toString(16);
+    if (ast.value == parseInt(hexValue, 16)) {
+      if (ast.value > 255) throw new Error(`Integers bigger than 255 not supported: ${ast.value}`);
+      // value is an integer
+      return `LDA #$${hexValue}`;
+    } else {
+      // TODO implement storing strings as an array of bytes
+      throw new Error(`Only integers are allowed to be initialised as literals. Passed value: ${ast.value}`)
+    }
+  }
+
   generateBinaryExpression(ast: any) {
     const left = this.generateAssembly(ast.left);
     const right = this.generateAssembly(ast.right);
     const operator = ast.operator;
 
     switch (operator) {
-        case '+':
-            return `${left}\nSTA TEMP\n${right}\nCLC\nADC TEMP`;
-        case '-':
-            return `${right}\nSTA TEMP\n${left}\nSEC\nSBC TEMP`;
-        // case '*': TODO implement multiply and divide subroutines
-        //     return `${left}\nSTA MULTIPLICAND\n${right}\nSTA MULTIPLIER\nJSR multiply`;
-        // case '/':
-        //     return `${left}\nSTA DIVIDEND\n${right}\nSTA DIVISOR\nJSR divide`;
-        case '&':
-            return `${right}\nSTA TEMP\n${left}\nAND TEMP`;
-        case '|':
-            return `${right}\nSTA TEMP\n${left}\nORA TEMP`;
-        case '^':
-            return `${right}\nSTA TEMP\n${left}\nEOR TEMP`;
-        case '==':
-            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBEQ equal\nLDA #0\nJMP end\n equal:\nLDA #1\n end:`;
-        case '!=':
-            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBNE not_equal\nLDA #0\nJMP end\n not_equal:\nLDA #1\n end:`;
-        case '<':
-            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCC less_than\nLDA #0\nJMP end\n less_than:\nLDA #1\n end:`;
-        case '>':
-            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCS greater_than\nLDA #0\nJMP end\n greater_than:\nLDA #1\n end:`;
-        case '<=':
-            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCC less_equal\nBEQ less_equal\nLDA #0\nJMP end\n less_equal:\nLDA #1\n end:`;
-        case '>=':
-            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCS greater_equal\nBEQ greater_equal\nLDA #0\nJMP end\n greater_equal:\nLDA #1\n end:`;
-        default:
-            throw new Error(`Unsupported binary operator: ${operator}`);
+      case '+':
+        return `${left}\nSTA TEMP\n${right}\nCLC\nADC TEMP`;
+      case '-':
+        return `${right}\nSTA TEMP\n${left}\nSEC\nSBC TEMP`;
+      // case '*': TODO implement multiply and divide subroutines
+      //     return `${left}\nSTA MULTIPLICAND\n${right}\nSTA MULTIPLIER\nJSR multiply`;
+      // case '/':
+      //     return `${left}\nSTA DIVIDEND\n${right}\nSTA DIVISOR\nJSR divide`;
+      case '&':
+        return `${right}\nSTA TEMP\n${left}\nAND TEMP`;
+      case '|':
+        return `${right}\nSTA TEMP\n${left}\nORA TEMP`;
+      case '^':
+        return `${right}\nSTA TEMP\n${left}\nEOR TEMP`;
+      case '==':
+        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBEQ equal\nLDA #0\nJMP end\n equal:\nLDA #1\n end:`;
+      case '!=':
+        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBNE not_equal\nLDA #0\nJMP end\n not_equal:\nLDA #1\n end:`;
+      case '<':
+        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCC less_than\nLDA #0\nJMP end\n less_than:\nLDA #1\n end:`;
+      case '>':
+        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCS greater_than\nLDA #0\nJMP end\n greater_than:\nLDA #1\n end:`;
+      case '<=':
+        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCC less_equal\nBEQ less_equal\nLDA #0\nJMP end\n less_equal:\nLDA #1\n end:`;
+      case '>=':
+        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCS greater_equal\nBEQ greater_equal\nLDA #0\nJMP end\n greater_equal:\nLDA #1\n end:`;
+      default:
+        throw new Error(`Unsupported binary operator: ${operator}`);
     }
-}
+  }
+
+  generateIdentifier(ast: any) {
+    const identifierLocation = this.memoryManager.getMemoryLocation(ast.name);
+    return `LDA ${identifierLocation}`;
+  }
 
   generateFunctionDeclaration(ast: any) {
     const functionName = ast.id.name;
