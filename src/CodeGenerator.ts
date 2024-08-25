@@ -8,10 +8,10 @@ export default class CodeGenerator {
     this.memoryManager = memoryManager;
   }
 
-  generateAssembly(ast: any): any {
+  generateCodeSegment(ast: any): any {
     switch (ast.type) {
       case 'Program':
-        return ast.body.map((statement: any) => this.generateAssembly(statement)).join('\n');
+        return ast.body.map((statement: any) => this.generateCodeSegment(statement)).join('\n');
 
       case 'VariableDeclaration':
         return this.generateVariableDeclaration(ast);
@@ -54,13 +54,13 @@ export default class CodeGenerator {
   /* GENERIC JAVASCRIPT TOKENS */
 
   generateVariableDeclaration(ast: any) {
-    return ast.declarations.map((declaration: any) => this.generateAssembly(declaration)).join('\n');
+    return ast.declarations.map((declaration: any) => this.generateCodeSegment(declaration)).join('\n');
   }
 
   generateVariableDeclarator(ast: any) {
     const varName = ast.id.name;
     const varLocation = this.memoryManager.getMemoryLocation(varName);
-    const initValue = this.generateAssembly(ast.init);
+    const initValue = this.generateCodeSegment(ast.init);
     return `${initValue}\nSTA ${varLocation}`;
   }
 
@@ -77,8 +77,8 @@ export default class CodeGenerator {
   }
 
   generateBinaryExpression(ast: any) {
-    const left = this.generateAssembly(ast.left);
-    const right = this.generateAssembly(ast.right);
+    const left = this.generateCodeSegment(ast.left);
+    const right = this.generateCodeSegment(ast.right);
     const operator = ast.operator;
 
     switch (operator) {
@@ -125,7 +125,7 @@ export default class CodeGenerator {
     // Generate code for function body
     const functionBody = ast.body.body
       .map(
-        (statement: any) => (this.generateAssembly(statement)
+        (statement: any) => (this.generateCodeSegment(statement)
           .split('\n')
           .map((line: string) => "  ".concat(line))
           .join('\n'))
@@ -137,7 +137,7 @@ export default class CodeGenerator {
 
   generateBlockStatement(ast: any) {
     // Iterate over each statement in the block and generate assembly for it
-    return ast.body.map((statement: any) => this.generateAssembly(statement)).join('\n');
+    return ast.body.map((statement: any) => this.generateCodeSegment(statement)).join('\n');
   }
 
   generateCallExpression(ast: any) {
@@ -149,7 +149,7 @@ export default class CodeGenerator {
     // Handle return value, if any (basically loads it into the A register)
     let returnValue = '';
     if (ast.argument) {
-      returnValue = this.generateAssembly(ast.argument);
+      returnValue = this.generateCodeSegment(ast.argument);
     }
 
     // Ensure the return value is in the accumulator and then return from the function
