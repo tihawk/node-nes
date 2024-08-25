@@ -25,7 +25,7 @@ export default class CodeGenerator {
       case 'Literal': // a number or string (or w/e other literals there are)
         const hexValue = ast.value.toString(16);
         if (ast.value == parseInt(hexValue, 16)) {
-          if (ast.value > 255) throw new Error (`Integers bigger than 255 not supported: ${ast.value}`);
+          if (ast.value > 255) throw new Error(`Integers bigger than 255 not supported: ${ast.value}`);
           // value is an integer
           return `LDA #$${hexValue}`;
         } else {
@@ -34,7 +34,7 @@ export default class CodeGenerator {
         }
 
       case 'NewExpression': // TODO
-        throw new Error(`Variable declarators of type NewExpression are not implemented: ${util.inspect(ast, {showHidden: false, depth: null, colors: true})}`)
+        throw new Error(`Variable declarators of type NewExpression are not implemented: ${util.inspect(ast, { showHidden: false, depth: null, colors: true })}`)
 
       case 'BinaryExpression':
         const left = this.generateAssembly(ast.left);
@@ -55,10 +55,61 @@ export default class CodeGenerator {
         return `LDA ${identifierLocation}`;
 
       case 'ExpressionStatement': // TODO
-        throw new Error(`Variable declarators of type ExpressionStatement are not implemented: ${util.inspect(ast, {showHidden: false, depth: null, colors: true})}`)
+        throw new Error(`Variable declarators of type ExpressionStatement are not implemented: ${util.inspect(ast, { showHidden: false, depth: null, colors: true })}`)
+
+      case 'FunctionDeclaration':
+        return this.generateFunctionDeclaration(ast);
+
+      case 'BlockStatement':
+        return this.generateBlockStatement(ast);
+
+      case 'ReturnStatement':
+        return this.generateReturnStatement(ast);
+
+      case 'CallExpression':
+        return this.generateCallExpression(ast);
 
       default:
         throw new Error(`Unknown AST node type: ${ast.type}`);
     }
   }
+
+  generateFunctionDeclaration(ast: any) {
+    const functionName = ast.id.name;
+    const functionLabel = `${functionName}_func`;
+
+    // Generate code for function body
+    const functionBody = ast.body.body
+      .map(
+        (statement: any) => (this.generateAssembly(statement)
+          .split('\n')
+          .map((line: string) => "  ".concat(line))
+          .join('\n'))
+      ).join('\n');
+
+    // Create function label and body
+    return `${functionLabel}:\n${functionBody}`;
+  }
+
+  generateBlockStatement(ast: any) {
+    // Iterate over each statement in the block and generate assembly for it
+    return ast.body.map((statement: any) => this.generateAssembly(statement)).join('\n');
+  }
+
+  generateCallExpression(ast: any) {
+    const functionName = ast.callee.name;
+    return `JSR ${functionName}_func`;
+  }
+
+  generateReturnStatement(ast: any) {
+    // Handle return value, if any (basically loads it into the A register)
+    let returnValue = '';
+    if (ast.argument) {
+      returnValue = this.generateAssembly(ast.argument);
+    }
+
+    // Ensure the return value is in the accumulator and then return from the function
+    return `${returnValue}\nRTS`;
+  }
+
 }

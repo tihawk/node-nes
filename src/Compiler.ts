@@ -13,7 +13,7 @@ export default class Compiler {
   }
 
   compile(jsCode: string) {
-      const ast = esprima.parseScript(jsCode);
+      const ast = esprima.parse(jsCode, { sourceType: 'module' });
       console.log(util.inspect(ast, {showHidden: false, depth: null, colors: true}))
       return this.codeGenerator.generateAssembly(ast);
   }
