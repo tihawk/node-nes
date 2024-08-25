@@ -37,6 +37,7 @@ export default class CodeGenerator {
         throw new Error(`Variable declarators of type NewExpression are not implemented: ${util.inspect(ast, { showHidden: false, depth: null, colors: true })}`)
 
       case 'BinaryExpression':
+        return this.generateBinaryExpression(ast);
         const left = this.generateAssembly(ast.left);
         const right = this.generateAssembly(ast.right);
         const operator = ast.operator;
@@ -73,6 +74,43 @@ export default class CodeGenerator {
         throw new Error(`Unknown AST node type: ${ast.type}`);
     }
   }
+
+  generateBinaryExpression(ast: any) {
+    const left = this.generateAssembly(ast.left);
+    const right = this.generateAssembly(ast.right);
+    const operator = ast.operator;
+
+    switch (operator) {
+        case '+':
+            return `${left}\nSTA TEMP\n${right}\nCLC\nADC TEMP`;
+        case '-':
+            return `${right}\nSTA TEMP\n${left}\nSEC\nSBC TEMP`;
+        // case '*': TODO implement multiply and divide subroutines
+        //     return `${left}\nSTA MULTIPLICAND\n${right}\nSTA MULTIPLIER\nJSR multiply`;
+        // case '/':
+        //     return `${left}\nSTA DIVIDEND\n${right}\nSTA DIVISOR\nJSR divide`;
+        case '&':
+            return `${right}\nSTA TEMP\n${left}\nAND TEMP`;
+        case '|':
+            return `${right}\nSTA TEMP\n${left}\nORA TEMP`;
+        case '^':
+            return `${right}\nSTA TEMP\n${left}\nEOR TEMP`;
+        case '==':
+            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBEQ equal\nLDA #0\nJMP end\n equal:\nLDA #1\n end:`;
+        case '!=':
+            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBNE not_equal\nLDA #0\nJMP end\n not_equal:\nLDA #1\n end:`;
+        case '<':
+            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCC less_than\nLDA #0\nJMP end\n less_than:\nLDA #1\n end:`;
+        case '>':
+            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCS greater_than\nLDA #0\nJMP end\n greater_than:\nLDA #1\n end:`;
+        case '<=':
+            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCC less_equal\nBEQ less_equal\nLDA #0\nJMP end\n less_equal:\nLDA #1\n end:`;
+        case '>=':
+            return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCS greater_equal\nBEQ greater_equal\nLDA #0\nJMP end\n greater_equal:\nLDA #1\n end:`;
+        default:
+            throw new Error(`Unsupported binary operator: ${operator}`);
+    }
+}
 
   generateFunctionDeclaration(ast: any) {
     const functionName = ast.id.name;
