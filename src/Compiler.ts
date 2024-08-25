@@ -7,15 +7,16 @@ const util = require('util')
 export default class Compiler {
   memoryManager: MemoryManager
   codeGenerator: CodeGenerator
+  header: string
+  startup: string
+  zeropage: string
+  code: string
+  vectors: string
+  chars: string
   constructor() {
-      this.memoryManager = new MemoryManager();
-      this.codeGenerator = new CodeGenerator(this.memoryManager);
-  }
-
-  compile(jsCode: string) {
-      const ast = esprima.parse(jsCode, { sourceType: 'module' });
-      console.log(util.inspect(ast, {showHidden: false, depth: null, colors: true}));
-      let header = `
+    this.memoryManager = new MemoryManager();
+    this.codeGenerator = new CodeGenerator(this.memoryManager);
+    this.header = `
 .segment "HEADER"
 
 .byte "NES"     ; boilerplate
@@ -28,20 +29,22 @@ export default class Compiler {
 .byte $00       ; 9 - NTSC
 .byte $00
 .byte $00, $00, $00, $00, $00 ; Filler
-      `;
+`;
+    this.startup = '.segment "STARTUP"\n\n';
+    this.zeropage = '.segment "ZEROPAGE"\n\n';
+    this.code = '.segment "CODE"\n\n';
+    this.vectors = '.segment "VECTORS"\n\n';
+    this.chars = '.segment "CHARS"\n\n';
+  }
 
-      let startup = '.segment "STARTUP"\n\n';
+  compile(jsCode: string) {
+    const ast = esprima.parse(jsCode, { sourceType: 'module' });
+    console.log(util.inspect(ast, { showHidden: false, depth: null, colors: true }));
 
-      let zeropage = '.segment "ZEROPAGE"\n\n';
-      zeropage = zeropage.concat(`TEMP: .res ${this.memoryManager.reserveZeroPageSpace('TEMP')}\n`);
+    this.zeropage = this.zeropage.concat(`TEMP: .res ${this.memoryManager.reserveZeroPageSpace('TEMP')}\n`);
 
-      let code = '.segment "CODE"\n\n'
-      code = code.concat(this.codeGenerator.generateCodeSegment(ast));
+    this.code = this.code.concat(this.codeGenerator.generateCodeSegment(ast));
 
-      let vectors = '.segment "VECTORS"\n\n';
-
-      let chars = '.segment "CHARS"\n\n';
-
-      return [header, startup, zeropage, code, vectors, chars].join('\n');
+    return [this.header, this.startup, this.zeropage, this.code, this.vectors, this.chars].join('\n');
   }
 }

@@ -8,6 +8,16 @@ export default class CodeGenerator {
     this.memoryManager = memoryManager;
   }
 
+  generateZeropageSegment(ast: any): any {
+    switch (ast.type) {
+      case 'Program':
+        return ast.body.map((statement: any) => this.generateZeropageSegment(statement)).join('\n');
+
+      case 'VariableDeclaration':
+        return ast.declarations.map((declaration: any) => this.generateZeropageSegment(declaration)).join('\n');
+    }
+  }
+
   generateCodeSegment(ast: any): any {
     switch (ast.type) {
       case 'Program':
@@ -58,6 +68,8 @@ export default class CodeGenerator {
   }
 
   generateVariableDeclarator(ast: any) {
+    if (ast.init === null) return; // initialised as null. we don't want that in the code segment
+    if (ast.init.type === 'Identifier' && ast.init.name === 'undefined') return; // probably undefined. same as above
     const varName = ast.id.name;
     const varLocation = this.memoryManager.getMemoryLocation(varName);
     const initValue = this.generateCodeSegment(ast.init);

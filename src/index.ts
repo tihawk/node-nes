@@ -3,12 +3,18 @@ const fs = require('fs');
 
 // Example usage
 const jsCode = `
+// let temp;
+let temp2 = undefined;
 const a = 10;
 const b = 5;
+const anotherB = b;
 function compareF() {
-  return a > b;
+  return temp2 > b;
 }
 const c = compareF();
+// const header = {
+//   type: 'NES'
+// }
 `;
 
 const nesAssemblyUtils = `
