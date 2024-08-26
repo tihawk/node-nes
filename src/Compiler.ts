@@ -1,4 +1,5 @@
 import CodeGenerator from "./CodeGenerator";
+import DecoratorParser from "./DecoratorParser";
 import MemoryManager from "./MemoryManager";
 const esprima = require('esprima');
 const util = require('util')
@@ -6,6 +7,7 @@ const util = require('util')
 // Compiler: Manages the whole compilation process
 export default class Compiler {
   memoryManager: MemoryManager
+  decoratorParser: DecoratorParser
   codeGenerator: CodeGenerator
   header: string
   startup: string
@@ -15,6 +17,7 @@ export default class Compiler {
   chars: string
   constructor() {
     this.memoryManager = new MemoryManager();
+    this.decoratorParser = new DecoratorParser();
     this.codeGenerator = new CodeGenerator(this.memoryManager);
     this.header = `
 .segment "HEADER"
@@ -38,8 +41,10 @@ export default class Compiler {
   }
 
   compile(jsCode: string) {
-    const ast = esprima.parse(jsCode, { sourceType: 'module' });
+    const ast = esprima.parse(jsCode, { sourceType: 'module', comment: true, loc: true });
     console.log(util.inspect(ast, { showHidden: false, depth: null, colors: true }));
+
+    this.decoratorParser.parse(ast);
 
     this.zeropage = this.zeropage.concat(`TEMP: .res ${this.memoryManager.reserveZeroPageSpace('TEMP')}\n`);
 

@@ -8,16 +8,6 @@ export default class CodeGenerator {
     this.memoryManager = memoryManager;
   }
 
-  generateZeropageSegment(ast: any): any {
-    switch (ast.type) {
-      case 'Program':
-        return ast.body.map((statement: any) => this.generateZeropageSegment(statement)).join('\n');
-
-      case 'VariableDeclaration':
-        return ast.declarations.map((declaration: any) => this.generateZeropageSegment(declaration)).join('\n');
-    }
-  }
-
   generateCodeSegment(ast: any): any {
     switch (ast.type) {
       case 'Program':
@@ -28,6 +18,12 @@ export default class CodeGenerator {
 
       case 'VariableDeclarator':
         return this.generateVariableDeclarator(ast);
+
+      case 'ExpressionStatement':
+        return this.generateCodeSegment(ast.expression);
+
+      case 'AssignmentExpression':
+        return this.generateAssignmentExpression(ast);
 
       case 'Literal': // a number or string (or w/e other literals there are)
         return this.generateLiteral(ast);
@@ -74,6 +70,13 @@ export default class CodeGenerator {
     const varLocation = this.memoryManager.getMemoryLocation(varName);
     const initValue = this.generateCodeSegment(ast.init);
     return `${initValue}\nSTA ${varLocation}`;
+  }
+
+  generateAssignmentExpression(ast: any) {
+    const varName = ast.left.name;            // Get the variable name from the LHS
+    const varLocation = this.memoryManager.getMemoryLocation(varName); // Get its memory location
+    const value = this.generateCodeSegment(ast.right); // Generate assembly for the RHS
+    return `${value}\nSTA ${varLocation}`; // Store the RHS value in the LHS variable's location
   }
 
   generateLiteral(ast: any) {

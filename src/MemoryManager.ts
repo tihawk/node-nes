@@ -12,7 +12,7 @@ export default class MemoryManager {
     this.zeroPageMap = {}; // ZEROPAGE segment
     this.reservedZeroPage = 0;
     this.memoryMap = {};
-    this.nextAddress = 0x0200; // Start of memory allocation
+    this.nextAddress = 0x0000; // Start of memory allocation
   }
 
   getMemoryLocation(variableName: string) {
