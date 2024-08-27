@@ -3,12 +3,14 @@ const fs = require('fs');
 
 // Example usage
 const jsCode = `
+// @char
+let mario = "mario.chr", notMario = null;
 {
   let a = 0;
 }
 // @zeropage
 const entity = {
-  // @.byte
+  // @.byte <- doesn't work
   xpos: undefined
 }
 let appleH = 0x01;

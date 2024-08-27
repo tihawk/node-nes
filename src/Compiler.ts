@@ -1,3 +1,4 @@
+import CharsGenerator from "./CharsGenerator";
 import CodeGenerator from "./CodeGenerator";
 import DecoratorParser from "./DecoratorParser";
 import MemoryManager from "./MemoryManager";
@@ -9,6 +10,7 @@ export default class Compiler {
   memoryManager: MemoryManager
   decoratorParser: DecoratorParser
   codeGenerator: CodeGenerator
+  charsGenerator: CharsGenerator
   header: string
   startup: string
   zeropage: string
@@ -19,6 +21,7 @@ export default class Compiler {
     this.memoryManager = new MemoryManager();
     this.decoratorParser = new DecoratorParser();
     this.codeGenerator = new CodeGenerator(this.memoryManager);
+    this.charsGenerator = new CharsGenerator();
     this.header = `
 .segment "HEADER"
 
@@ -42,13 +45,15 @@ export default class Compiler {
 
   compile(jsCode: string) {
     const ast = esprima.parse(jsCode, { sourceType: 'module', comment: true, loc: true });
-    console.log(util.inspect(ast, { showHidden: false, depth: null, colors: true }));
+    // console.log(util.inspect(ast, { showHidden: false, depth: null, colors: true }));
 
-    this.decoratorParser.parse(ast);
+    const {decorated, undecorated} = this.decoratorParser.parse(ast);
 
     this.zeropage = this.zeropage.concat(`TEMP: .res ${this.memoryManager.reserveZeroPageSpace('TEMP')}\n`);
 
-    this.code = this.code.concat(this.codeGenerator.generateCodeSegment(ast));
+    this.code = this.code.concat(this.codeGenerator.generateCodeSegment(undecorated));
+
+    this.chars = this.chars.concat(this.charsGenerator.generateChars(decorated))
 
     return [this.header, this.startup, this.zeropage, this.code, this.vectors, this.chars].join('\n');
   }

@@ -1,9 +1,9 @@
-const util = require('util');
-
 export enum DECORATOR {
   ZEROPAGE = '@zeropage',
   BYTE = '@byte',
-  WORD = '@word'
+  WORD = '@word',
+  DWORD = '@dword',
+  CHAR = '@char'
 }
 
 export interface LocI {
@@ -11,7 +11,7 @@ export interface LocI {
 }
 
 export interface DecoratorI {
-  decorator: DECORATOR
+  type: DECORATOR
   loc: LocI
 }
 
@@ -21,13 +21,15 @@ export interface AstWithDecoratorsI {
   decorator: DecoratorI
 }
 
-export default class DecoratorParser {
-  astWithDecorators: AstWithDecoratorsI[]
-  constructor() {
-    this.astWithDecorators = []
-  }
+export interface DecoratorParseReturn {
+  undecorated: any
+  decorated: AstWithDecoratorsI[]
+}
 
-  parse(ast: any) {
+export default class DecoratorParser {
+  constructor() { }
+
+  parse(ast: any): DecoratorParseReturn {
     const body = ast.body;
     const comments = ast.comments;
     const decoratorTypes = Object.values(DECORATOR);
@@ -35,7 +37,7 @@ export default class DecoratorParser {
     const decorators: DecoratorI[] = comments
       .filter((comment: any) => comment.type === 'Line' && decoratorTypes.includes(comment.value.trim()))
       .map((decoratorComment: { value: string, loc: LocI }) => ({
-        decorator: decoratorComment.value.trim(),
+        type: decoratorComment.value.trim(),
         loc: decoratorComment.loc
       } as DecoratorI));
 
@@ -59,8 +61,18 @@ export default class DecoratorParser {
       }
     });
 
-    console.log(util.inspect(decoratedAsts, { showHidden: false, depth: null, colors: true }));
 
+    const astIndices = decoratedAsts.map(val => val.index)
+    const filteredBody = body.filter((ast: any, index: number) => !astIndices.includes(index));
+    const filteredAst = {
+      ...ast,
+      body: filteredBody
+    }
+
+    return {
+      undecorated: filteredAst,
+      decorated: decoratedAsts
+    }
 
   }
 }
