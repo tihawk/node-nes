@@ -1,5 +1,6 @@
 export enum DECORATOR {
   ZEROPAGE = '@zeropage',
+  HEADER = '@header',
   BYTE = '@byte',
   WORD = '@word',
   DWORD = '@dword',

@@ -1,6 +1,7 @@
 import CharsGenerator from "./CharsGenerator";
 import CodeGenerator from "./CodeGenerator";
 import DecoratorParser from "./DecoratorParser";
+import HeaderGenerator from "./HeaderGenerator";
 import MemoryManager from "./MemoryManager";
 const esprima = require('esprima');
 const util = require('util')
@@ -9,6 +10,7 @@ const util = require('util')
 export default class Compiler {
   memoryManager: MemoryManager
   decoratorParser: DecoratorParser
+  headerGenerator: HeaderGenerator
   codeGenerator: CodeGenerator
   charsGenerator: CharsGenerator
   header: string
@@ -20,27 +22,15 @@ export default class Compiler {
   constructor() {
     this.memoryManager = new MemoryManager();
     this.decoratorParser = new DecoratorParser();
+    this.headerGenerator = new HeaderGenerator();
     this.codeGenerator = new CodeGenerator(this.memoryManager);
     this.charsGenerator = new CharsGenerator();
-    this.header = `
-.segment "HEADER"
-
-.byte "NES"     ; boilerplate
-.byte $1a       ; boilerplate
-.byte $04       ; 4 - 2*16k PRG ROM
-.byte $01       ; 5 - 8k CHR ROM
-.byte %00000001 ; 6 - mapper - horizontal mirroring <- refers to how graphics are organised (horizontal or vertical mirroring, depending on how the game scrolls) four-screen mirroring?
-.byte $00       ; 7 - 
-.byte $00       ; 8 - 
-.byte $00       ; 9 - NTSC
-.byte $00
-.byte $00, $00, $00, $00, $00 ; Filler
-`;
-    this.startup = '.segment "STARTUP"\n\n';
-    this.zeropage = '.segment "ZEROPAGE"\n\n';
-    this.code = '.segment "CODE"\n\n';
-    this.vectors = '.segment "VECTORS"\n\n';
-    this.chars = '.segment "CHARS"\n\n';
+    this.header = '\n.segment "HEADER"\n\n';
+    this.startup = '\n.segment "STARTUP"\n\n';
+    this.zeropage = '\n.segment "ZEROPAGE"\n\n';
+    this.code = '\n.segment "CODE"\n\n';
+    this.vectors = '\n.segment "VECTORS"\n\n';
+    this.chars = '\n.segment "CHARS"\n\n';
   }
 
   compile(jsCode: string) {
@@ -48,6 +38,8 @@ export default class Compiler {
     // console.log(util.inspect(ast, { showHidden: false, depth: null, colors: true }));
 
     const {decorated, undecorated} = this.decoratorParser.parse(ast);
+
+    this.header = this.header.concat(this.headerGenerator.generateHeader(decorated));
 
     this.zeropage = this.zeropage.concat(`TEMP: .res ${this.memoryManager.reserveZeroPageSpace('TEMP')}\n`);
 

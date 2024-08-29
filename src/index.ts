@@ -92,4 +92,7 @@ const handleExecReturn = (error: Error, stdout: string, stderr: string) => {
   console.log(`stdout: ${stdout}`);
 }
 
-exec('ca65 out.asm -o out.o --debug-info; ld65 out.o -o out.nes -t nes --dbgfile out.dbg', handleExecReturn);
+exec('ca65 out.asm -o out.o --debug-info', (error: Error, stdout: string, stderr: string) => {
+  handleExecReturn(error, stdout, stderr);
+  exec('ld65 out.o -o out.nes -t nes --dbgfile out.dbg', handleExecReturn);
+});

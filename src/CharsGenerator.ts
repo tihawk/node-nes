@@ -1,4 +1,3 @@
-const util = require('util');
 import { AstWithDecoratorsI, DECORATOR } from "./DecoratorParser";
 
 export default class CharsGenerator {
