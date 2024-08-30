@@ -4,8 +4,12 @@ const util = require('util');
 // Code Generator: Converts AST to NES assembly
 export default class CodeGenerator {
   memoryManager: MemoryManager
+  ifLabelCounter: number
+  compareLabelCounter: number
   constructor(memoryManager: MemoryManager) {
     this.memoryManager = memoryManager;
+    this.ifLabelCounter = 0; // Counter to create unique labels for branches
+    this.compareLabelCounter = 0;
   }
 
   generateCodeSegment(ast: any): any {
@@ -52,6 +56,9 @@ export default class CodeGenerator {
       case 'CallExpression':
         return this.generateCallExpression(ast);
 
+      case 'IfStatement':
+        return this.generateIfStatement(ast);
+
       default:
         throw new Error(`Unknown AST node type: ${ast.type}`);
     }
@@ -69,14 +76,14 @@ export default class CodeGenerator {
     const varName = ast.id.name;
     const varLocation = this.memoryManager.getMemoryLocation(varName);
     const initValue = this.generateCodeSegment(ast.init);
-    return `${initValue}\nSTA ${varLocation}`;
+    return `${initValue}\n    STA ${varLocation}`;
   }
 
   generateAssignmentExpression(ast: any) {
     const varName = ast.left.name;            // Get the variable name from the LHS
     const varLocation = this.memoryManager.getMemoryLocation(varName); // Get its memory location
     const value = this.generateCodeSegment(ast.right); // Generate assembly for the RHS
-    return `${value}\nSTA ${varLocation}`; // Store the RHS value in the LHS variable's location
+    return `${value}\n    STA ${varLocation}`; // Store the RHS value in the LHS variable's location
   }
 
   generateLiteral(ast: any) {
@@ -84,7 +91,7 @@ export default class CodeGenerator {
     if (ast.value == parseInt(hexValue, 16)) {
       if (ast.value > 255) throw new Error(`Integers bigger than 255 not supported: ${ast.value}`);
       // value is an integer
-      return `LDA #$${hexValue}`;
+      return `    LDA #$${hexValue}`;
     } else {
       // TODO implement storing strings as an array of bytes
       throw new Error(`Only integers are allowed to be initialised as literals. Passed value: ${ast.value}`)
@@ -98,31 +105,31 @@ export default class CodeGenerator {
 
     switch (operator) {
       case '+':
-        return `${left}\nSTA TEMP\n${right}\nCLC\nADC TEMP`;
+        return `${left}\n    STA TEMP\n${right}\n    CLC\n    ADC TEMP`;
       case '-':
-        return `${right}\nSTA TEMP\n${left}\nSEC\nSBC TEMP`;
+        return `${right}\n    STA TEMP\n${left}\n    SEC\n    SBC TEMP`;
       // case '*': TODO implement multiply and divide subroutines
-      //     return `${left}\nSTA MULTIPLICAND\n${right}\nSTA MULTIPLIER\nJSR multiply`;
+      //     return `${left}\n    STA MULTIPLICAND\n${right}\n    STA MULTIPLIER\n    JSR multiply`;
       // case '/':
-      //     return `${left}\nSTA DIVIDEND\n${right}\nSTA DIVISOR\nJSR divide`;
+      //     return `${left}\n    STA DIVIDEND\n${right}\n    STA DIVISOR\n    JSR divide`;
       case '&':
-        return `${right}\nSTA TEMP\n${left}\nAND TEMP`;
+        return `${right}\n    STA TEMP\n${left}\n    AND TEMP`;
       case '|':
-        return `${right}\nSTA TEMP\n${left}\nORA TEMP`;
+        return `${right}\n    STA TEMP\n${left}\n    ORA TEMP`;
       case '^':
-        return `${right}\nSTA TEMP\n${left}\nEOR TEMP`;
+        return `${right}\n    STA TEMP\n${left}\n    EOR TEMP`;
       case '==':
-        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBEQ equal\nLDA #0\nJMP end\n equal:\nLDA #1\n end:`;
+        return `${left}\n    STA TEMP\n${right}\n    CMP TEMP\n    BEQ lbl_equal_${++this.compareLabelCounter}\n    LDA #0\n    JMP lbl_end_${this.compareLabelCounter}\nlbl_equal_${this.compareLabelCounter}:\n    LDA #1\nlbl_end_${this.compareLabelCounter}:`;
       case '!=':
-        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBNE not_equal\nLDA #0\nJMP end\n not_equal:\nLDA #1\n end:`;
+        return `${left}\n    STA TEMP\n${right}\n    CMP TEMP\n    BNE lbl_not_equal_${++this.compareLabelCounter}\n    LDA #0\n    JMP lbl_end_${this.compareLabelCounter}\nlbl_not_equal_${this.compareLabelCounter}:\n    LDA #1\nlbl_end_${this.compareLabelCounter}:`;
       case '<':
-        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCC less_than\nLDA #0\nJMP end\n less_than:\nLDA #1\n end:`;
+        return `${right}\n    STA TEMP\n${left}\n    CMP TEMP\n    BCC lbl_less_than_${++this.compareLabelCounter}\n    LDA #0\n    JMP lbl_end_${this.compareLabelCounter}\nlbl_less_than_${this.compareLabelCounter}:\n    LDA #1\nlbl_end_${this.compareLabelCounter}:`;
       case '>':
-        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCS greater_than\nLDA #0\nJMP end\n greater_than:\nLDA #1\n end:`;
+        return `${right}\n    STA TEMP\n${left}\n    CMP TEMP\n    BEQ lbl_end_${++this.compareLabelCounter}\n    BCS lbl_greater_than_${this.compareLabelCounter}\n    LDA #0\n    JMP lbl_end_${this.compareLabelCounter}\nlbl_greater_than_${this.compareLabelCounter}:\n    LDA #1\nlbl_end_${this.compareLabelCounter}:`;
       case '<=':
-        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCC less_equal\nBEQ less_equal\nLDA #0\nJMP end\n less_equal:\nLDA #1\n end:`;
+        return `${right}\n    STA TEMP\n${left}\n    CMP TEMP\n    BCC lbl_less_equal_${++this.compareLabelCounter}\n    BEQ lbl_less_equal_${this.compareLabelCounter}\n    LDA #0\n    JMP lbl_end_${this.compareLabelCounter}\nlbl_less_equal_${this.compareLabelCounter}:\n    LDA #1\nlbl_end_${this.compareLabelCounter}:`;
       case '>=':
-        return `${right}\nSTA TEMP\n${left}\nCMP TEMP\nBCS greater_equal\nBEQ greater_equal\nLDA #0\nJMP end\n greater_equal:\nLDA #1\n end:`;
+        return `${right}\n    STA TEMP\n${left}\n    CMP TEMP\n    BCS lbl_greater_equal_${++this.compareLabelCounter}\n    LDA #0\n    JMP lbl_end_${this.compareLabelCounter}\nlbl_greater_equal_${this.compareLabelCounter}:\n    LDA #1\nlbl_end_${this.compareLabelCounter}:`;
       default:
         throw new Error(`Unsupported binary operator: ${operator}`);
     }
@@ -130,7 +137,7 @@ export default class CodeGenerator {
 
   generateIdentifier(ast: any) {
     const identifierLocation = this.memoryManager.getMemoryLocation(ast.name);
-    return `LDA ${identifierLocation}`;
+    return `    LDA ${identifierLocation}`;
   }
 
   generateFunctionDeclaration(ast: any) {
@@ -140,11 +147,7 @@ export default class CodeGenerator {
     // Generate code for function body
     const functionBody = ast.body.body
       .map(
-        (statement: any) => (this.generateCodeSegment(statement)
-          .split('\n')
-          .map((line: string) => "  ".concat(line))
-          .join('\n'))
-      ).join('\n');
+        (statement: any) => (this.generateCodeSegment(statement))).join('\n');
 
     // Create function label and body
     return `${functionLabel}:\n${functionBody}`;
@@ -157,7 +160,7 @@ export default class CodeGenerator {
 
   generateCallExpression(ast: any) {
     const functionName = ast.callee.name;
-    return `JSR ${functionName}_func`;
+    return `    JSR ${functionName}_func`;
   }
 
   generateReturnStatement(ast: any) {
@@ -168,7 +171,24 @@ export default class CodeGenerator {
     }
 
     // Ensure the return value is in the accumulator and then return from the function
-    return `${returnValue}\nRTS`;
+    return `${returnValue}    RTS\n`;
+  }
+
+  generateIfStatement(ast: any) {
+    const labelIndex = this.ifLabelCounter++;
+    const testCode = this.generateCodeSegment(ast.test);
+    const consequentCode = this.generateCodeSegment(ast.consequent);
+
+    let code = `${testCode}\n    BEQ else_${labelIndex}\n${consequentCode}\n    JMP endif_${labelIndex}`;
+
+    if (ast.alternate) {
+      const alternateCode = this.generateCodeSegment(ast.alternate);
+      code += `\nelse_${labelIndex}:\n${alternateCode}`;
+    }
+
+    code += `\nendif_${labelIndex}:`;
+
+    return code;
   }
 
 }
