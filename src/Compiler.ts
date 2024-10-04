@@ -3,6 +3,7 @@ import CodeGenerator from "./CodeGenerator";
 import DecoratorParser from "./DecoratorParser";
 import HeaderGenerator from "./HeaderGenerator";
 import MemoryManager from "./MemoryManager";
+import { defaultBssSegment, defaultVectorsSegment, defaultZeropageSegment, irq, nmi, reset } from "./util/asm"
 const esprima = require('esprima');
 const util = require('util')
 
@@ -18,6 +19,7 @@ export default class Compiler {
   zeropage: string
   code: string
   vectors: string
+  bss: string
   chars: string
   constructor() {
     this.memoryManager = new MemoryManager();
@@ -30,6 +32,7 @@ export default class Compiler {
     this.zeropage = '\n.segment "ZEROPAGE"\n\n';
     this.code = '\n.segment "CODE"\n\n';
     this.vectors = '\n.segment "VECTORS"\n\n';
+    this.bss = '\n.segment "BSS"\n\n';
     this.chars = '\n.segment "CHARS"\n\n';
   }
 
@@ -41,12 +44,24 @@ export default class Compiler {
 
     this.header = this.header.concat(this.headerGenerator.generateHeader(decorated));
 
-    this.zeropage = this.zeropage.concat(`TEMP: .res ${this.memoryManager.reserveZeroPageSpace('TEMP')}\n`);
-
     this.code = this.code.concat(this.codeGenerator.generateCodeSegment(undecorated));
+
+    // Hardcode Vectors segment stuff
+    defaultZeropageSegment.forEach((val) => {
+      // rome-ignore lint/suspicious/noAssignInExpressions: <explanation>
+      return (this.zeropage = this.zeropage.concat(
+        `${val[0]}: .res ${this.memoryManager.reserveZeroPageSpace(
+          val[0] as string,
+          val[1] as number,
+        )}\n`,
+      ));
+    });
+    this.vectors = this.vectors.concat(defaultVectorsSegment);
+    this.code = this.code.concat(nmi).concat(reset).concat(irq);
+    this.bss = this.bss.concat(defaultBssSegment);
 
     this.chars = this.chars.concat(this.charsGenerator.generateChars(decorated))
 
-    return [this.header, this.startup, this.zeropage, this.code, this.vectors, this.chars].join('\n');
+    return [this.header, this.startup, this.zeropage, this.code, this.vectors, this.bss, this.chars].join('\n');
   }
 }
