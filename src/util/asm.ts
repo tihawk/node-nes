@@ -18,7 +18,6 @@ export const defaultZeropageSegment = [
 export const defaultBssSegment = [
  ["nmt_update", 256],  // Nametable update entry buffer for PPU update
  ["palette",     32],  // Palette buffer for PPU update
- ["oam",        256],  // Sprite OAM data to be uploaded by DMA
 ]
 
 export const defaultVectorsSegment = `
@@ -64,7 +63,7 @@ reset:
   lda #255
   ldx #0
   :
-    sta oam, X
+    ;sta oam, X
     inx
     inx
     inx
@@ -115,7 +114,7 @@ nmi:
       ; Sprite OAM DMA
       ldx #0
       stx $2003
-      lda #>oam
+      lda #>oam::topRightY
       sta $4014
       ; Palettes
       lda #%10001000

@@ -2,15 +2,15 @@ const util = require('util');
 import { AstWithDecoratorsI, DECORATOR } from "./DecoratorParser";
 import MemoryManager from "./MemoryManager";
 
-export default class ZeropageGenerator {
+export default class BssGenerator {
   memoryManager: MemoryManager
   constructor(memoryManager: MemoryManager) {
     this.memoryManager = memoryManager;
   }
 
-  generateZeropage(astArr: AstWithDecoratorsI[]): any {
+  generateBss(astArr: AstWithDecoratorsI[]): any {
     const charDeclarations = astArr.filter(val => {
-      if (val.decorator.type !== DECORATOR.ZEROPAGE) return false;
+      if (val.decorator.type !== DECORATOR.BSS) return false;
       if (val.ast.type !== 'VariableDeclaration') return false;
       return true;
     });
@@ -27,11 +27,11 @@ export default class ZeropageGenerator {
       case 'VariableDeclarator': {
         if (ast.init === null) {
           // initialised as null. we don't want that in the header segment
-          throw new Error(`Undeclared zeropage variable "${ast.id.name}". Use declaration to specify amount of bytes to reserve.`);
+          throw new Error(`Undeclared bss variable "${ast.id.name}". Use declaration to specify amount of bytes to reserve.`);
         }
         if (ast.init.type === 'Identifier' && ast.init.name === 'undefined') {
           // probably undefined. same as above
-          throw new Error(`Undefined zeropage variable "${ast.id.name}". Use declaration to specify amount of bytes to reserve.`);
+          throw new Error(`Undefined bss variable "${ast.id.name}". Use declaration to specify amount of bytes to reserve.`);
         }
         let identifier = `${ast.id.name}`
         if (ast.init.type === 'ObjectExpression') {

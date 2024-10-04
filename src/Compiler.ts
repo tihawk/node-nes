@@ -1,3 +1,4 @@
+import BssGenerator from "./BssGenerator";
 import CharsGenerator from "./CharsGenerator";
 import CodeGenerator from "./CodeGenerator";
 import DecoratorParser from "./DecoratorParser";
@@ -15,32 +16,34 @@ export default class Compiler {
   decoratorParser: DecoratorParser
   headerGenerator: HeaderGenerator
   zeropageGenerator: ZeropageGenerator
+  bssGenerator: BssGenerator
   rodataGenerator: RodataGenerator
   codeGenerator: CodeGenerator
   charsGenerator: CharsGenerator
   header: string
   startup: string
   zeropage: string
+  bss: string
   rodata: string
   code: string
   vectors: string
-  bss: string
   chars: string
   constructor() {
     this.memoryManager = new MemoryManager();
     this.decoratorParser = new DecoratorParser();
     this.headerGenerator = new HeaderGenerator();
     this.zeropageGenerator = new ZeropageGenerator(this.memoryManager);
+    this.bssGenerator = new BssGenerator(this.memoryManager);
     this.rodataGenerator = new RodataGenerator(this.memoryManager);
     this.codeGenerator = new CodeGenerator(this.memoryManager);
     this.charsGenerator = new CharsGenerator();
     this.header = '\n.segment "HEADER"\n\n';
     this.startup = '\n.segment "STARTUP"\n\n';
     this.zeropage = '\n.segment "ZEROPAGE"\n\n';
+    this.bss = '\n.segment "BSS"\n\n';
     this.rodata = '\n.segment "RODATA"\n\n';
     this.code = '\n.segment "CODE"\n\n';
     this.vectors = '\n.segment "VECTORS"\n\n';
-    this.bss = '\n.segment "BSS"\n\n';
     this.chars = '\n.segment "CHARS"\n\n';
   }
 
@@ -53,6 +56,12 @@ export default class Compiler {
     this.header = this.header.concat(this.headerGenerator.generateHeader(decorated));
 
     this.zeropage = this.zeropage.concat(this.zeropageGenerator.generateZeropage(decorated));
+
+    defaultBssSegment.forEach((val) => {
+      this.memoryManager.storeLabel(val[0] as string)
+      this.bss = this.bss.concat(`${val[0]}: .res ${val[1]}\n`);
+    });
+    this.bss = this.bss.concat(this.bssGenerator.generateBss(decorated));
 
     this.rodata = this.rodata.concat(this.rodataGenerator.generateRodata(decorated));
 
@@ -69,13 +78,9 @@ export default class Compiler {
     });
     this.vectors = this.vectors.concat(defaultVectorsSegment);
     this.code = this.code.concat(nmi).concat(reset).concat(irq);
-    defaultBssSegment.forEach((val) => {
-      this.memoryManager.storeLabel(val[0] as string)
-      this.bss = this.bss.concat(`${val[0]}: .res ${val[1]}\n`);
-    });
 
     this.chars = this.chars.concat(this.charsGenerator.generateChars(decorated))
 
-    return [this.header, this.startup, this.zeropage, this.rodata, this.code, this.vectors, this.bss, this.chars].join('\n');
+    return [this.header, this.startup, this.zeropage, this.bss, this.rodata, this.code, this.vectors, this.chars].join('\n');
   }
 }
