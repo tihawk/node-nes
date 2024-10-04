@@ -5,6 +5,7 @@ import HeaderGenerator from "./HeaderGenerator";
 import MemoryManager from "./MemoryManager";
 import RodataGenerator from "./RodataGenerator";
 import { defaultBssSegment, defaultVectorsSegment, defaultZeropageSegment, irq, nmi, reset } from "./util/asm"
+import ZeropageGenerator from "./ZeropageGenerator";
 const esprima = require('esprima');
 const util = require('util')
 
@@ -13,6 +14,7 @@ export default class Compiler {
   memoryManager: MemoryManager
   decoratorParser: DecoratorParser
   headerGenerator: HeaderGenerator
+  zeropageGenerator: ZeropageGenerator
   rodataGenerator: RodataGenerator
   codeGenerator: CodeGenerator
   charsGenerator: CharsGenerator
@@ -28,6 +30,7 @@ export default class Compiler {
     this.memoryManager = new MemoryManager();
     this.decoratorParser = new DecoratorParser();
     this.headerGenerator = new HeaderGenerator();
+    this.zeropageGenerator = new ZeropageGenerator(this.memoryManager);
     this.rodataGenerator = new RodataGenerator(this.memoryManager);
     this.codeGenerator = new CodeGenerator(this.memoryManager);
     this.charsGenerator = new CharsGenerator();
@@ -48,6 +51,8 @@ export default class Compiler {
     const {decorated, undecorated} = this.decoratorParser.parse(ast);
 
     this.header = this.header.concat(this.headerGenerator.generateHeader(decorated));
+
+    this.zeropage = this.zeropage.concat(this.zeropageGenerator.generateZeropage(decorated));
 
     this.rodata = this.rodata.concat(this.rodataGenerator.generateRodata(decorated));
 
