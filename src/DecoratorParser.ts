@@ -4,7 +4,9 @@ export enum DECORATOR {
   BYTE = '@byte',
   WORD = '@word',
   DWORD = '@dword',
-  CHAR = '@char'
+  CHAR = '@char',
+  RODATA = '@rodata',
+  BSS = '@bss'
 }
 
 export interface LocI {

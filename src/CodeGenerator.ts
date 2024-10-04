@@ -74,14 +74,14 @@ export default class CodeGenerator {
     if (ast.init === null) return; // initialised as null. we don't want that in the code segment
     if (ast.init.type === 'Identifier' && ast.init.name === 'undefined') return; // probably undefined. same as above
     const varName = ast.id.name;
-    const varLocation = this.memoryManager.getMemoryLocation(varName);
+    const varLocation = this.memoryManager.getOrSetMemory(varName);
     const initValue = this.generateCodeSegment(ast.init);
     return `${initValue}\n    STA ${varLocation}`;
   }
 
   generateAssignmentExpression(ast: any) {
     const varName = ast.left.name;            // Get the variable name from the LHS
-    const varLocation = this.memoryManager.getMemoryLocation(varName); // Get its memory location
+    const varLocation = this.memoryManager.getOrSetMemory(varName); // Get its memory location
     const value = this.generateCodeSegment(ast.right); // Generate assembly for the RHS
     return `${value}\n    STA ${varLocation}`; // Store the RHS value in the LHS variable's location
   }
@@ -136,7 +136,7 @@ export default class CodeGenerator {
   }
 
   generateIdentifier(ast: any) {
-    const identifierLocation = this.memoryManager.getMemoryLocation(ast.name);
+    const identifierLocation = this.memoryManager.getOrSetMemory(ast.name);
     return `    LDA ${identifierLocation}`;
   }
 

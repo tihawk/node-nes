@@ -15,12 +15,11 @@ export const defaultZeropageSegment = [
   ["TEMP", 1],            // Temporary variable
 ]
 
-export const defaultBssSegment = `
-nmt_update: .res 256  ; Nametable update entry buffer for PPU update
-palette:    .res 32   ; Palette buffer for PPU update
-oam:        .res 256  ; Sprite OAM data to be uploaded by DMA
-
-`
+export const defaultBssSegment = [
+ ["nmt_update", 256],  // Nametable update entry buffer for PPU update
+ ["palette",     32],  // Palette buffer for PPU update
+ ["oam",        256],  // Sprite OAM data to be uploaded by DMA
+]
 
 export const defaultVectorsSegment = `
 .word nmi
@@ -79,7 +78,7 @@ reset:
   ; Enable the NMI for graphical updates, and jump to our main programme
   lda #%10001000
   sta $2000
-  jmp main
+  jmp main_func
 
 `
 
